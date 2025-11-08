@@ -34,6 +34,8 @@ services:
       rabbitmq: {condition: service_healthy}
       redis: {condition: service_started}
     networks: [backend]
+    labels:
+      - traefik.enable=false # <--- ИСПРАВЛЕНИЕ: Игнорируем worker
 
   postgres:
     image: postgres:16-alpine
@@ -44,10 +46,14 @@ services:
     healthcheck: { test: ["CMD-SHELL","pg_isready -U app"], interval: 5s, timeout: 3s, retries: 10 }
     volumes: [pgdata:/var/lib/postgresql/data]
     networks: [backend]
+    labels:
+      - traefik.enable=false # <--- ИСПРАВЛЕНИЕ: Игнорируем Postgres
 
   redis:
     image: redis:7-alpine
     networks: [backend]
+    labels:
+      - traefik.enable=false # <--- ИСПРАВЛЕНИЕ: Игнорируем Redis
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -55,15 +61,18 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     healthcheck: { test: ["CMD","rabbitmq-diagnostics","ping"], interval: 5s, timeout: 3s, retries: 10 }
-    ports: ["15672:15672"] # mgmt UI
+    # Порт 15672:15672 не нужен, если не открывать UI напрямую, но пусть будет.
+    ports: ["15672:15672"] # mgmt UI 
     networks: [backend]
+    labels:
+      - traefik.enable=false # <--- ИСПРАВЛЕНИЕ: Игнорируем RabbitMQ
 
   adminer:
     image: adminer:latest
     networks: [public, backend]
     labels:
       - traefik.http.routers.adminer.rule=Host(`adminer.localhost`)
-      - traefik.http.services.adminer.loadbalancer.server.port=8080
+      - traefik.http.services.adminer.loadbalancer.server.port=8080 # ПРАВИЛЬНЫЙ ПОРТ
 
 volumes:
   pgdata:
@@ -72,4 +81,3 @@ networks:
   public:
   backend:
     internal: true
-
